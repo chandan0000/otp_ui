@@ -1,5 +1,9 @@
-import 'package:flutter/material.dart';
+import 'dart:developer';
 
+import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
+import '../../utils/utils.dart';
 import 'otp.dart';
 
 class Register extends StatefulWidget {
@@ -10,6 +14,38 @@ class Register extends StatefulWidget {
 }
 
 class _RegisterState extends State<Register> {
+  TextEditingController phoneController = TextEditingController();
+  void sendOTP() async {
+    String phone = "+91" + phoneController.text.trim();
+    if (phoneController.text.length == 10 && phoneController.text.isNotEmpty) {
+      await FirebaseAuth.instance.verifyPhoneNumber(
+        phoneNumber: phone,
+        codeSent: (verificationId, resendToken) {
+          Navigator.popUntil(context, (route) => route.isFirst);
+          Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (context) => Otp(verificationId: verificationId)));
+        },
+        verificationCompleted: (credential) {},
+        verificationFailed: (ex) {
+          log(ex.code.toString());
+          showSnackBar(context, ex.code);
+        },
+        codeAutoRetrievalTimeout: (verficationId) {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (context) => Otp(verificationId: verficationId),
+            ),
+          );
+        },
+        timeout: Duration(seconds: 30),
+      );
+    } else {
+      showSnackBar(context, "Please enter valid phone number");
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -79,6 +115,7 @@ class _RegisterState extends State<Register> {
                 child: Column(
                   children: [
                     TextFormField(
+                      controller: phoneController,
                       keyboardType: TextInputType.number,
                       style: TextStyle(
                         fontSize: 18,
@@ -115,9 +152,7 @@ class _RegisterState extends State<Register> {
                       width: double.infinity,
                       child: ElevatedButton(
                         onPressed: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(builder: (context) => Otp()),
-                          );
+                          sendOTP();
                         },
                         style: ButtonStyle(
                           foregroundColor:
